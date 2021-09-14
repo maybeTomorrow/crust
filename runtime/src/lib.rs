@@ -103,7 +103,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("crust"),
     impl_name: create_runtime_str!("crustio-crust"),
     authoring_version: 1,
-    spec_version: 32,
+    spec_version: 33,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1
@@ -687,9 +687,20 @@ impl balances::Config<balances::Instance1> for Runtime {
     type MaxLocks = MaxLocks;
 }
 
+parameter_types! {
+    pub const CandyModuleId: ModuleId = ModuleId(*b"candying");
+    pub const MinimalCandy: Balance = 10 * DOLLARS;
+    pub const ExchangeRatio: Balance = 1000;
+}
+
 impl candy::Config for Runtime {
     type Event = Event;
     type Balance = Balance;
+    type ModuleId = CandyModuleId;
+    type Currency = Balances;
+    type MinimalCandy = MinimalCandy;
+    type ExchangeRatio = ExchangeRatio;
+    type CurrencyToVote = CurrencyToVoteHandler;
 }
 
 impl balances::Config<balances::Instance2> for Runtime {
@@ -889,7 +900,7 @@ construct_runtime! {
         Sudo: pallet_sudo::{Module, Call, Storage, Config<T>, Event<T>},
 
         // Token candy and claims bridge
-        Candy: candy::{Module, Call, Storage, Event<T>},
+        Candy: candy::{Module, Call, Storage, Event<T>, ValidateUnsigned},
         Claims: claims::{Module, Call, Storage, Event<T>, ValidateUnsigned},
         CSM: balances::<Instance2>::{Module, Call, Storage, Config<T>, Event<T>},
         CSMLocking: csm_locking::{Module, Call, Storage, Event<T>},
