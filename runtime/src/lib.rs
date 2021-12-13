@@ -100,10 +100,10 @@ impl_opaque_keys! {
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("crust"),
-    impl_name: create_runtime_str!("crustio-crust"),
+    spec_name: create_runtime_str!("hws"),
+    impl_name: create_runtime_str!("hwsio-hws"),
     authoring_version: 1,
-    spec_version: 7,
+    spec_version: 2,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1
@@ -392,11 +392,11 @@ parameter_types! {
     // 6 sessions in an era (6 hours).
     pub const SessionsPerEra: SessionIndex = 6;
     // 112 eras for unbonding (28 days).
-    pub const BondingDuration: EraIndex = 28 * 4;
+    pub const BondingDuration: EraIndex = 7 * 4;
     // 108 eras in which slashes can be cancelled (slightly less than 28 days).
-    pub const SlashDeferDuration: EraIndex = 27 * 4;
+    pub const SlashDeferDuration: EraIndex =7 * 4;
     // 1 * CRUs / TB, since we treat 1 TB = 1_000_000_000_000, so the ratio = `1`
-    pub const SPowerRatio: u128 = 1;
+    pub const SPowerRatio: u128 = 1_000_000;
     // 64 guarantors for one validator.
     pub const MaxGuarantorRewardedPerValidator: u32 = 64;
     // 60 eras means 15 days if era = 6 hours
