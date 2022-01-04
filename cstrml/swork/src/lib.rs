@@ -52,7 +52,7 @@ pub(crate) const LOG_TARGET: &'static str = "swork";
 const IDENTITY_UPDATE_LENGTH: usize = 500; // Loop 500 identities per block
 const SRD_LIMIT: u64 = 2_251_799_813_685_248; // 2 PB <-> 2 * 1024 * 1024 * 1024 * 1024 * 1024.
 const FILES_LIMIT: u64 = 9_007_199_254_740_992; // 8 PB <-> 8 * 1024 * 1024 * 1024 * 1024 * 1024.
-const FILES_COUNT_LIMIT: usize = 5000; // 5000 files for now.
+const FILES_COUNT_LIMIT: usize = 300; // TODO: 300 files for now(will be deleted after completed wr reporting mechanism).
 const NEW_IDENTITY: ReportSlot = 1;
 const NO_PUNISHMENT: ReportSlot = 0;
 
@@ -432,7 +432,7 @@ decl_module! {
         /// - Read: Identities
         /// - Write: 3
         /// # </weight>
-        #[weight = (T::WeightInfo::register(), DispatchClass::Operational)]
+        #[weight = T::WeightInfo::register()]
         pub fn register(
             origin,
             ias_sig: IASSig,
@@ -483,7 +483,7 @@ decl_module! {
         /// - Read: Identities, ReportedInSlot, Code, market.Merchant, market.SOrder
         /// - Write: WorkReport, ReportedInSlot, market.SOrder
         /// # </weight>
-        #[weight = (T::WeightInfo::report_works(added_files.len() as u32, deleted_files.len() as u32), DispatchClass::Operational)]
+        #[weight = T::WeightInfo::report_works(added_files.len() as u32, deleted_files.len() as u32)]
         pub fn report_works(
             origin,
             curr_pk: SworkerPubKey,
@@ -502,7 +502,7 @@ decl_module! {
             let mut prev_pk = curr_pk.clone();
 
             // 1. Basic check
-            ensure!(reported_srd_size < SRD_LIMIT && reported_files_size < FILES_LIMIT && added_files.len() < FILES_COUNT_LIMIT, Error::<T>::IllegalWorkReport);
+            ensure!(reported_srd_size < SRD_LIMIT && reported_files_size < FILES_LIMIT && added_files.len() <= FILES_COUNT_LIMIT && deleted_files.len() <= FILES_COUNT_LIMIT, Error::<T>::IllegalWorkReport);
 
             // 2. Ensure reporter is registered
             ensure!(PubKeys::contains_key(&curr_pk), Error::<T>::IllegalReporter);
@@ -752,8 +752,13 @@ decl_module! {
             // 5. Ensure who is in the allowlist
             ensure!(Self::groups(&owner).allowlist.contains(&who), Error::<T>::NotInAllowlist);
 
-            // 6. Ensure who's wr's spower is zero
-            ensure!(Self::work_reports(identity.anchor).unwrap_or_default().spower == 0, Error::<T>::IllegalSpower);
+            // 6. Set who's wr's spower to zero
+            WorkReports::mutate_exists(&identity.anchor, |maybe_wr| match *maybe_wr {
+                Some(WorkReport { ref mut spower, .. }) => {
+                    *spower = 0;
+                },
+                ref mut i => *i = None,
+            });
 
             // 7. Join the group
             <Groups<T>>::mutate(&owner, |group| {
@@ -802,7 +807,22 @@ decl_module! {
                 group.members.remove(&who);
             });
 
-            // 6. Emit event
+            // 6. Reset the work report to no files
+            WorkReports::mutate_exists(&identity.anchor, |maybe_wr| match *maybe_wr {
+                Some(WorkReport { ref mut spower, ref mut reported_files_size, ref mut reported_files_root, .. }) => {
+                    *spower = 0;
+                    *reported_files_size = 0;
+                    // The total number of 0 is 32
+                    *reported_files_root = [
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0].to_vec();
+                },
+                ref mut i => *i = None,
+            });
+
+            // 7. Emit event
             Self::deposit_event(RawEvent::QuitGroupSuccess(who, owner));
 
             Ok(())
@@ -986,6 +1006,7 @@ impl<T: Config> Module<T> {
         let mut old_spower: u64 = 0;
         let mut old_free: u64 = 0;
         let mut old_reported_files_size: u64 = 0;
+
         // 1. Mark who has reported in this (report)slot
         ReportedInSlot::insert(&anchor, report_slot, true);
 

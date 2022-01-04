@@ -1428,9 +1428,9 @@ fn create_and_join_group_should_work() {
 
             add_wr(&b_pk, &WorkReport {
                 report_slot: 0,
-                spower: 0,
+                spower: 2,
                 free: 0,
-                reported_files_size: 2,
+                reported_files_size: 0,
                 reported_srd_root: hex::decode("00").unwrap(),
                 reported_files_root: hex::decode("11").unwrap()
             });
@@ -1484,7 +1484,7 @@ fn group_allowlist_should_work() {
                 report_slot: 0,
                 spower: 0,
                 free: 0,
-                reported_files_size: 2,
+                reported_files_size: 0,
                 reported_srd_root: hex::decode("00").unwrap(),
                 reported_files_root: hex::decode("11").unwrap()
             });
@@ -1796,7 +1796,7 @@ fn join_group_should_fail_due_to_invalid_situations() {
                 report_slot: 0,
                 spower: 0,
                 free: 0,
-                reported_files_size: 2,
+                reported_files_size: 0,
                 reported_srd_root: hex::decode("00").unwrap(),
                 reported_files_root: hex::decode("11").unwrap()
             });
@@ -3006,7 +3006,7 @@ fn basic_check_should_work() {
 
             let mut legal_wr_info = legal_work_report_with_added_files();
             // Exceed the max files count
-            for index in 0..5000 {
+            for index in 0..300 {
                 legal_wr_info.added_files.push((format!("{:04}", index).as_bytes().to_vec(), 0, 0));
             }
             assert_noop!(
